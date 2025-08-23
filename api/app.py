@@ -3,7 +3,7 @@ from pymongo import MongoClient
 import uuid, os
 from mangum import Mangum  # <- serverless adapter
 
-app = Flask(__name__, template_folder="../templates")
+app = Flask(__name__, template_folder="templates")
 
 # MongoDB connection
 mongo_url = os.getenv("MONGO_URL")
