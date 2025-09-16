@@ -32,7 +32,7 @@
             textarea.select();
             textarea.setSelectionRange(0, 99999);
             navigator.clipboard.writeText(textarea.value)
-                .then(() => alert("Copied!"))
+                .then(() => console.log(""))
                 .catch(err => alert("Failed to copy: " + err));
         }
 
