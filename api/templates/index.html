@@ -4,15 +4,67 @@
 
 {% block body %}
 <h1 class="mb-4">Give</h1>
-<form method="post">
 
+<!-- Normal Form (optional, still works for regular POST) -->
+<form method="post" id="normalForm">
     <div class="btn-group mb-3">
         <button type="submit" class="btn btn-primary">Save</button>
         <button type="button" class="btn btn-secondary" onclick="clearContent()">Clear</button>
         <button type="button" class="btn btn-success" onclick="copyContent()">Copy</button>
         <button type="button" class="btn btn-warning" onclick="pasteContent()">Paste</button>
+        <button type="button" class="btn btn-info" onclick="uploadRaw()">Upload Raw</button> <!-- New button -->
     </div>
-    <textarea id="contentArea" name="content" class="form-control mb-3" rows="15000" placeholder="Paste something here..."></textarea>
 
+    <textarea id="contentArea" name="content" class="form-control mb-3" rows="15" placeholder="Paste something here..."></textarea>
 </form>
+
+<script>
+function clearContent() {
+    document.getElementById("contentArea").value = "";
+}
+
+function copyContent() {
+    const area = document.getElementById("contentArea");
+    area.select();
+    document.execCommand("copy");
+    alert("Copied to clipboard!");
+}
+
+function pasteContent() {
+    navigator.clipboard.readText().then(text => {
+        document.getElementById("contentArea").value = text;
+    });
+}
+
+// ------------------- Upload Raw Function -------------------
+function uploadRaw() {
+    const content = document.getElementById("contentArea").value.trim();
+    if (!content) {
+        alert("Content is empty!");
+        return;
+    }
+
+    fetch("/api/upload/raw", {
+        method: "POST",
+        body: content,
+        headers: {
+            "Content-Type": "text/plain"
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.status === "success") {
+            alert("Uploaded! Your key: " + data.key);
+            window.location.href = "/" + data.key; // redirect to view page
+        } else {
+            alert("Error: " + data.message);
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert("An error occurred while uploading.");
+    });
+}
+</script>
+
 {% endblock %}
