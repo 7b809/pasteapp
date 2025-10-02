@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 from pymongo import MongoClient
 import uuid, os
 
@@ -17,7 +17,7 @@ def index():
     if request.method == "POST":
         content = request.form.get("content")
         if content and content.strip():
-            key = str(uuid.uuid4())[:8]
+            key = str(uuid.uuid4())[:8]  # generate unique key
             pastes.insert_one({"key": key, "message_list": [content]})
             return redirect(url_for("view_paste", key=key))
     return render_template("index.html")
@@ -35,6 +35,49 @@ def view_paste(key):
     latest_message = paste["message_list"][-1] if paste else ""
     return render_template("paste.html", key=key, content=latest_message)
 
+# ------------------ Existing API Route ------------------
+
+@app.route("/api/upload", methods=["POST"])
+def api_upload():
+    """
+    Accepts JSON payload:
+    { "content": "<file content here>" }
+    Stores it in MongoDB with a unique key.
+    Returns the key as JSON.
+    """
+    data = request.get_json()
+    content = data.get("content") if data else None
+    
+    if content and content.strip():
+        key = str(uuid.uuid4())[:8]
+        pastes.insert_one({"key": key, "message_list": [content]})
+        return jsonify({"status": "success", "key": key})
+    
+    return jsonify({"status": "error", "message": "No content provided"}), 400
+
+# ------------------ New API Route for Raw Body ------------------
+
+@app.route("/api/upload_raw", methods=["POST"])
+def api_upload_raw():
+    """
+    Accepts raw text in the request body.
+    Stores it in MongoDB with a unique key.
+    Returns the key as JSON.
+    """
+    content = request.data.decode("utf-8")
+    
+    if content and content.strip():
+        key = str(uuid.uuid4())[:8]
+        pastes.insert_one({"key": key, "message_list": [content]})
+        return jsonify({"status": "success", "key": key})
+    
+    return jsonify({"status": "error", "message": "No content provided"}), 400
+
+# ------------------ Run App ------------------
+
+if __name__ == "__main__":
+    app.run(debug=True)
+q
 # ------------------ API Route for JSON ------------------
 
 @app.route("/api/upload", methods=["POST"])
