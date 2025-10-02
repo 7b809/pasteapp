@@ -4,37 +4,61 @@ import uuid, os
 
 app = Flask(__name__)
 
-# ------------------ MongoDB Connection ------------------
+# MongoDB connection
 mongo_url = os.getenv("MONGO_URL")
 client = MongoClient(mongo_url)
 db = client["paste_db"]
 pastes = db["pastes"]
 
-# ------------------ Web Routes ------------------
+# ------------------ Existing Routes ------------------
 
-@app.route("/", methods=["GET", "POST"], endpoint="index_endpoint")
-def index_func():
+@app.route("/", methods=["GET", "POST"])
+def index():
     if request.method == "POST":
         content = request.form.get("content")
         if content and content.strip():
             key = str(uuid.uuid4())[:8]  # generate unique key
             pastes.insert_one({"key": key, "message_list": [content]})
-            return redirect(url_for("view_paste_endpoint", key=key))
+            return redirect(url_for("view_paste", key=key))
     return render_template("index.html")
 
-@app.route("/<key>", methods=["GET", "POST"], endpoint="view_paste_endpoint")
-def view_paste_func(key):
+@app.route("/<key>", methods=["GET", "POST"])
+def view_paste(key):
     paste = pastes.find_one({"key": key})
     
     if request.method == "POST":
         new_content = request.form.get("content")
         if new_content and new_content.strip():
             pastes.update_one({"key": key}, {"$push": {"message_list": new_content}})
-            return redirect(url_for("view_paste_endpoint", key=key))
+            return redirect(url_for("view_paste", key=key))
     
     latest_message = paste["message_list"][-1] if paste else ""
     return render_template("paste.html", key=key, content=latest_message)
 
+# ------------------ New API Route ------------------
+
+@app.route("/api/upload", methods=["POST"])
+def api_upload():
+    """
+    Accepts JSON payload:
+    { "content": "<file content here>" }
+    Stores it in MongoDB with a unique key.
+    Returns the key as JSON.
+    """
+    data = request.get_json()
+    content = data.get("content") if data else None
+    
+    if content and content.strip():
+        key = str(uuid.uuid4())[:8]
+        pastes.insert_one({"key": key, "message_list": [content]})
+        return jsonify({"status": "success", "key": key})
+    
+    return jsonify({"status": "error", "message": "No content provided"}), 400
+
+# ------------------ Run App ------------------
+
+if __name__ == "__main__":
+    app.run(debug=True)
 # ------------------ API Routes ------------------
 
 @app.route("/api/upload", methods=["POST"], endpoint="api_upload_json_endpoint")
