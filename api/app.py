@@ -3,7 +3,7 @@ from pymongo import MongoClient
 import uuid, os
 
 app = Flask(__name__)
- 
+
 # MongoDB connection
 mongo_url = os.getenv("MONGO_URL")
 client = MongoClient(mongo_url)
@@ -35,7 +35,7 @@ def view_paste(key):
     latest_message = paste["message_list"][-1] if paste else ""
     return render_template("paste.html", key=key, content=latest_message)
 
-# ------------------ New API Route ------------------
+# ------------------ Existing API Route ------------------
 
 @app.route("/api/upload", methods=["POST"])
 def api_upload():
@@ -47,6 +47,24 @@ def api_upload():
     """
     data = request.get_json()
     content = data.get("content") if data else None
+    
+    if content and content.strip():
+        key = str(uuid.uuid4())[:8]
+        pastes.insert_one({"key": key, "message_list": [content]})
+        return jsonify({"status": "success", "key": key})
+    
+    return jsonify({"status": "error", "message": "No content provided"}), 400
+
+# ------------------ New API Route for Raw Body ------------------
+
+@app.route("/api/upload/raw", methods=["POST"])
+def api_upload_raw():
+    """
+    Accepts raw text in the request body.
+    Stores it in MongoDB with a unique key.
+    Returns the key as JSON.
+    """
+    content = request.get_data(as_text=True)
     
     if content and content.strip():
         key = str(uuid.uuid4())[:8]
