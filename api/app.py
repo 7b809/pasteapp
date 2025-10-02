@@ -3,7 +3,7 @@ from pymongo import MongoClient
 import uuid, os
 
 app = Flask(__name__)
-
+ 
 # MongoDB connection
 mongo_url = os.getenv("MONGO_URL")
 client = MongoClient(mongo_url)
