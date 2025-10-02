@@ -4,13 +4,13 @@ import uuid, os
 
 app = Flask(__name__)
 
-# MongoDB connection
+# ------------------ MongoDB Connection ------------------
 mongo_url = os.getenv("MONGO_URL")
 client = MongoClient(mongo_url)
 db = client["paste_db"]
 pastes = db["pastes"]
 
-# ------------------ Existing Routes ------------------
+# ------------------ Web Routes ------------------
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -34,6 +34,61 @@ def view_paste(key):
     
     latest_message = paste["message_list"][-1] if paste else ""
     return render_template("paste.html", key=key, content=latest_message)
+
+# ------------------ API Routes ------------------
+
+@app.route("/api/upload", methods=["POST"])
+def api_upload():
+    """
+    Accepts JSON payload:
+    { "content": "<file content here>" }
+    Stores it in MongoDB with a unique key.
+    Returns the key as JSON.
+    """
+    data = request.get_json()
+    content = data.get("content") if data else None
+    
+    if content and content.strip():
+        key = str(uuid.uuid4())[:8]
+        pastes.insert_one({"key": key, "message_list": [content]})
+        return jsonify({"status": "success", "key": key})
+    
+    return jsonify({"status": "error", "message": "No content provided"}), 400
+
+
+@app.route("/api/upload_raw", methods=["POST"])
+def api_upload_raw():
+    """
+    Accepts raw text in body (Content-Type: text/plain).
+    Stores it in MongoDB with a unique key.
+    Returns the key as JSON.
+    """
+    raw_content = request.data.decode("utf-8").strip() if request.data else None
+
+    if raw_content:
+        key = str(uuid.uuid4())[:8]
+        pastes.insert_one({"key": key, "message_list": [raw_content]})
+        return jsonify({"status": "success", "key": key})
+
+    return jsonify({"status": "error", "message": "No raw content provided"}), 400
+
+
+@app.route("/api/get/<key>", methods=["GET"])
+def api_get(key):
+    """
+    Returns the paste data as JSON.
+    Example response:
+    { "key": "abcd1234", "messages": ["first msg", "second msg"] }
+    """
+    paste = pastes.find_one({"key": key})
+    if paste:
+        return jsonify({"status": "success", "key": key, "messages": paste["message_list"]})
+    return jsonify({"status": "error", "message": "Paste not found"}), 404
+
+# ------------------ Run App ------------------
+
+if __name__ == "__main__":
+    app.run(debug=True)
 
 # ------------------ API Routes ------------------
 
