@@ -1,16 +1,22 @@
-{% extends "base.html" %}
-{% block title %}Give{% endblock %}
-{% block body %}
+{% extends "base.html" %} {% block title %}Give{% endblock %} {% block body %}
 <h1 class="mb-4">Give</h1>
 
 <!-- Normal Form -->
 <form method="post" id="normalForm">
   <div class="btn-group mb-3">
     <button type="submit" class="btn btn-primary">Save</button>
-    <button type="button" class="btn btn-secondary" onclick="clearContent()">Clear</button>
-    <button type="button" class="btn btn-success" onclick="copyContent()">Copy</button>
-    <button type="button" class="btn btn-warning" onclick="pasteContent()">Paste</button>
-    <button type="button" class="btn btn-info" onclick="uploadRaw()">Upload Raw</button>
+    <button type="button" class="btn btn-secondary" onclick="clearContent()">
+      Clear
+    </button>
+    <button type="button" class="btn btn-success" onclick="copyContent()">
+      Copy
+    </button>
+    <button type="button" class="btn btn-warning" onclick="pasteContent()">
+      Paste
+    </button>
+    <button type="button" class="btn btn-info" onclick="uploadRaw()">
+      Upload Raw
+    </button>
   </div>
 
   <textarea
@@ -29,20 +35,31 @@
   <!-- Zip to Text and upload -->
   <div class="mb-3">
     <label class="form-label">Upload ZIP File → Convert & Upload as Text</label>
-    <input type="file" id="zipFileInput" accept=".zip" class="form-control">
-    <button id="zipToTextBtn" class="btn btn-primary mt-2">Convert & Upload ZIP as Text</button>
+    <input type="file" id="zipFileInput" accept=".zip" class="form-control" />
+    <button id="zipToTextBtn" class="btn btn-primary mt-2">
+      Convert & Upload ZIP as Text
+    </button>
   </div>
 
-  <!-- Text to Zip download -->
+  <!-- Text to Zip download via URL -->
   <div class="mb-3">
-    <label class="form-label">Upload Text File → Convert to ZIP</label>
-    <input type="file" id="textFileInput" accept=".txt" class="form-control">
-    <button id="textToZipBtn" class="btn btn-secondary mt-2">Convert Text → ZIP & Download</button>
+    <label class="form-label">Paste URL → Convert to ZIP</label>
+    <input
+      type="text"
+      id="pasteUrlInput"
+      placeholder="Enter paste URL"
+      class="form-control"
+    />
+    <button id="urlToZipBtn" class="btn btn-secondary mt-2">
+      Fetch & Download ZIP
+    </button>
   </div>
 
   <div id="zipStatus" class="mt-2 fw-bold"></div>
   <ul id="zipIdList" class="list-group mt-2"></ul>
-  <button id="zipCopyBtn" class="btn btn-success mt-2" style="display:none;">Copy All Paste URLs</button>
+  <button id="zipCopyBtn" class="btn btn-success mt-2" style="display: none">
+    Copy All Paste URLs
+  </button>
 </div>
 
 <!-- -------- Existing File Upload in Batches -------- -->
@@ -51,10 +68,14 @@
   <div class="mb-3">
     <input class="form-control" type="file" id="fileInput" accept=".txt" />
   </div>
-  <button id="uploadFileBtn" class="btn btn-primary" disabled>Upload File in Batches</button>
+  <button id="uploadFileBtn" class="btn btn-primary" disabled>
+    Upload File in Batches
+  </button>
   <div id="status" class="mt-2 fw-bold"></div>
   <ul id="idList" class="list-group mt-2"></ul>
-  <button id="copyBtn" class="btn btn-success mt-2" style="display: none">Copy All IDs</button>
+  <button id="copyBtn" class="btn btn-success mt-2" style="display: none">
+    Copy All IDs
+  </button>
 </div>
 
 <!-- -------- Scripts -------- -->
@@ -79,21 +100,24 @@
 
   function uploadRaw() {
     const content = document.getElementById("contentArea").value.trim();
-    if (!content) { alert("Content is empty!"); return; }
+    if (!content) {
+      alert("Content is empty!");
+      return;
+    }
 
     fetch("/api/upload/raw", {
       method: "POST",
       body: content,
       headers: { "Content-Type": "text/plain" },
     })
-    .then(res => res.json())
-    .then(data => {
-      if (data.status === "success") {
-        alert("Uploaded! Your key: " + data.key);
-        window.location.href = "/" + data.key;
-      } else alert("Error: " + data.message);
-    })
-    .catch(err => alert("An error occurred."));
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.status === "success") {
+          alert("Uploaded! Your key: " + data.key);
+          window.location.href = "/" + data.key;
+        } else alert("Error: " + data.message);
+      })
+      .catch((err) => alert("An error occurred."));
   }
 
   // ------------------- Existing Text File Batch Upload -------------------
@@ -167,13 +191,13 @@
   });
 
   // ------------------- ZIP -> Text -> Batch Upload -------------------
-  const zipFileInput = document.getElementById('zipFileInput');
-  const zipToTextBtn = document.getElementById('zipToTextBtn');
-  const zipStatus = document.getElementById('zipStatus');
-  const zipIdList = document.getElementById('zipIdList');
-  const zipCopyBtn = document.getElementById('zipCopyBtn');
+  const zipFileInput = document.getElementById("zipFileInput");
+  const zipToTextBtn = document.getElementById("zipToTextBtn");
+  const zipStatus = document.getElementById("zipStatus");
+  const zipIdList = document.getElementById("zipIdList");
+  const zipCopyBtn = document.getElementById("zipCopyBtn");
 
-  zipToTextBtn.addEventListener('click', async () => {
+  zipToTextBtn.addEventListener("click", async () => {
     if (!zipFileInput.files.length) return alert("Please select a ZIP file.");
     const file = zipFileInput.files[0];
     const reader = new FileReader();
@@ -181,84 +205,96 @@
     reader.onload = async (e) => {
       const arrayBuffer = e.target.result;
       const bytes = new Uint8Array(arrayBuffer);
-      let binary = '';
-      bytes.forEach(b => binary += String.fromCharCode(b));
+      let binary = "";
+      bytes.forEach((b) => (binary += String.fromCharCode(b)));
       const base64Text = btoa(binary);
 
       const CHUNK = 80000;
       const total = Math.ceil(base64Text.length / CHUNK);
       const ids = [];
-      zipIdList.innerHTML = '';
-      zipCopyBtn.style.display = 'none';
+      zipIdList.innerHTML = "";
+      zipCopyBtn.style.display = "none";
 
-      for(let i=0; i<total; i++){
-        const chunk = base64Text.slice(i*CHUNK, (i+1)*CHUNK);
-        zipStatus.textContent = `Uploading batch ${i+1} of ${total}...`;
+      for (let i = 0; i < total; i++) {
+        const chunk = base64Text.slice(i * CHUNK, (i + 1) * CHUNK);
+        zipStatus.textContent = `Uploading batch ${i + 1} of ${total}...`;
 
         try {
-          const res = await fetch('/api/upload/raw', {
-            method: 'POST',
-            headers: {'Content-Type': 'text/plain'},
-            body: chunk
+          const res = await fetch("/api/upload/raw", {
+            method: "POST",
+            headers: { "Content-Type": "text/plain" },
+            body: chunk,
           });
           const data = await res.json();
-          const li = document.createElement('li');
-          li.classList.add('list-group-item');
-          if(data.status === 'success'){
+          const li = document.createElement("li");
+          li.classList.add("list-group-item");
+          if (data.status === "success") {
             const fullUrl = `${window.location.origin}/${data.key}`;
             ids.push(fullUrl);
             li.innerHTML = `<a href="${fullUrl}" target="_blank">${fullUrl}</a>`;
           } else {
-            li.textContent = `Error in batch ${i+1}: ${data.message}`;
-            li.classList.add('list-group-item-danger');
+            li.textContent = `Error in batch ${i + 1}: ${data.message}`;
+            li.classList.add("list-group-item-danger");
           }
           zipIdList.appendChild(li);
-        } catch(err){
-          const li = document.createElement('li');
-          li.textContent = `Error in batch ${i+1}: ${err.message}`;
-          li.classList.add('list-group-item-danger');
+        } catch (err) {
+          const li = document.createElement("li");
+          li.textContent = `Error in batch ${i + 1}: ${err.message}`;
+          li.classList.add("list-group-item-danger");
           zipIdList.appendChild(li);
         }
       }
 
       zipStatus.textContent = `Upload complete! ${ids.length} of ${total} batches uploaded.`;
-      zipCopyBtn.style.display = 'inline-block';
+      zipCopyBtn.style.display = "inline-block";
       zipCopyBtn.onclick = () => {
-        navigator.clipboard.writeText(ids.join('\n'));
-        zipCopyBtn.textContent = 'Copied!';
-        setTimeout(()=> zipCopyBtn.textContent = 'Copy All Paste URLs', 1500);
-      }
-    }
+        navigator.clipboard.writeText(ids.join("\n"));
+        zipCopyBtn.textContent = "Copied!";
+        setTimeout(
+          () => (zipCopyBtn.textContent = "Copy All Paste URLs"),
+          1500
+        );
+      };
+    };
 
     reader.readAsArrayBuffer(file);
   });
 
   // ------------------- Text -> ZIP Download -------------------
-  const textFileInput = document.getElementById('textFileInput');
-  const textToZipBtn = document.getElementById('textToZipBtn');
+  const pasteUrlInput = document.getElementById("pasteUrlInput");
+  const urlToZipBtn = document.getElementById("urlToZipBtn");
 
-  textToZipBtn.addEventListener('click', () => {
-    if(!textFileInput.files.length) return alert("Please select a text file.");
-    const file = textFileInput.files[0];
-    const reader = new FileReader();
+  urlToZipBtn.addEventListener("click", async () => {
+    const url = pasteUrlInput.value.trim();
+    if (!url) return alert("Please enter a paste URL.");
 
-    reader.onload = (e) => {
-      const base64 = e.target.result;
-      const binary = atob(base64);
+    try {
+      urlToZipBtn.disabled = true;
+      urlToZipBtn.textContent = "Fetching...";
+
+      // Fetch the text content from the URL
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Failed to fetch. Status: ${res.status}`);
+      const base64Text = await res.text();
+
+      // Convert base64 text to binary
+      const binary = atob(base64Text);
       const bytes = new Uint8Array(binary.length);
-      for(let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
 
-      const blob = new Blob([bytes], {type:'application/zip'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = file.name.replace('.txt','.zip');
+      // Create a ZIP Blob
+      const blob = new Blob([bytes], { type: "application/zip" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "converted.zip"; // or extract name from URL if needed
       a.click();
-      URL.revokeObjectURL(url);
-    };
-
-    reader.readAsText(file);
+      URL.revokeObjectURL(a.href);
+    } catch (err) {
+      alert("Error: " + err.message);
+    } finally {
+      urlToZipBtn.disabled = false;
+      urlToZipBtn.textContent = "Fetch & Download ZIP";
+    }
   });
-
 </script>
 {% endblock %}
