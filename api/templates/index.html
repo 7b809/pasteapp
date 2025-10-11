@@ -43,15 +43,15 @@
 
   <!-- Text to Zip download via URL -->
   <div class="mb-3">
-    <label class="form-label">Paste URL → Convert to ZIP</label>
-    <input
-      type="text"
+    <label class="form-label">Paste URLs → Convert to ZIP</label>
+    <textarea
       id="pasteUrlInput"
-      placeholder="Enter paste URL"
+      placeholder="Enter one or more URLs, one per line"
       class="form-control"
-    />
+      rows="3"
+    ></textarea>
     <button id="urlToZipBtn" class="btn btn-secondary mt-2">
-      Fetch & Download ZIP
+      Fetch & Download ZIPs
     </button>
   </div>
 
@@ -265,36 +265,47 @@
   const urlToZipBtn = document.getElementById("urlToZipBtn");
 
   urlToZipBtn.addEventListener("click", async () => {
-    const url = pasteUrlInput.value.trim();
-    if (!url) return alert("Please enter a paste URL.");
+    const urls = pasteUrlInput.value
+      .split("\n")
+      .map((u) => u.trim())
+      .filter((u) => u.length > 0);
 
-    try {
-      urlToZipBtn.disabled = true;
-      urlToZipBtn.textContent = "Fetching...";
+    if (!urls.length) return alert("Please enter at least one URL.");
 
-      // Fetch the text content from the URL
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Failed to fetch. Status: ${res.status}`);
-      const base64Text = await res.text();
+    urlToZipBtn.disabled = true;
+    urlToZipBtn.textContent = "Fetching...";
 
-      // Convert base64 text to binary
-      const binary = atob(base64Text);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    for (let i = 0; i < urls.length; i++) {
+      const url = urls[i];
+      try {
+        const res = await fetch(url);
+        if (!res.ok)
+          throw new Error(`Failed to fetch ${url}. Status: ${res.status}`);
+        const base64Text = await res.text();
 
-      // Create a ZIP Blob
-      const blob = new Blob([bytes], { type: "application/zip" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "converted.zip"; // or extract name from URL if needed
-      a.click();
-      URL.revokeObjectURL(a.href);
-    } catch (err) {
-      alert("Error: " + err.message);
-    } finally {
-      urlToZipBtn.disabled = false;
-      urlToZipBtn.textContent = "Fetch & Download ZIP";
+        const binary = atob(base64Text);
+        const bytes = new Uint8Array(binary.length);
+        for (let j = 0; j < binary.length; j++) bytes[j] = binary.charCodeAt(j);
+
+        const blob = new Blob([bytes], { type: "application/zip" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+
+        // Optional: generate filename from URL
+        let filename = url.split("/").pop() || `converted_${i + 1}.zip`;
+        if (!filename.endsWith(".zip")) filename += ".zip";
+
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      } catch (err) {
+        console.error(`Error with URL ${url}:`, err);
+        alert(`Error fetching ${url}: ${err.message}`);
+      }
     }
+
+    urlToZipBtn.disabled = false;
+    urlToZipBtn.textContent = "Fetch & Download ZIPs";
   });
 </script>
 {% endblock %}
