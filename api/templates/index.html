@@ -5,18 +5,30 @@
 {% block body %}
 <h1 class="mb-4">Give</h1>
 
-<!-- Normal Form (optional, still works for regular POST) -->
+<!-- Normal Form -->
 <form method="post" id="normalForm">
     <div class="btn-group mb-3">
         <button type="submit" class="btn btn-primary">Save</button>
         <button type="button" class="btn btn-secondary" onclick="clearContent()">Clear</button>
         <button type="button" class="btn btn-success" onclick="copyContent()">Copy</button>
         <button type="button" class="btn btn-warning" onclick="pasteContent()">Paste</button>
-        <button type="button" class="btn btn-info" onclick="uploadRaw()">Upload Raw</button> <!-- New button -->
+        <button type="button" class="btn btn-info" onclick="uploadRaw()">Upload Raw</button>
     </div>
 
     <textarea id="contentArea" name="content" class="form-control mb-3" rows="15" placeholder="Paste something here..."></textarea>
 </form>
+
+<!-- New File Upload Section -->
+<div class="card p-3 mb-4 shadow-sm">
+    <h5>Upload Text File in Batches</h5>
+    <div class="mb-3">
+        <input class="form-control" type="file" id="fileInput" accept=".txt">
+    </div>
+    <button id="uploadFileBtn" class="btn btn-primary" disabled>Upload File in Batches</button>
+    <div id="status" class="mt-2 fw-bold"></div>
+    <ul id="idList" class="list-group mt-2"></ul>
+    <button id="copyBtn" class="btn btn-success mt-2" style="display:none;">Copy All IDs</button>
+</div>
 
 <script>
 function clearContent() {
@@ -36,35 +48,98 @@ function pasteContent() {
     });
 }
 
-// ------------------- Upload Raw Function -------------------
+// Upload Raw Text from Textarea
 function uploadRaw() {
     const content = document.getElementById("contentArea").value.trim();
-    if (!content) {
-        alert("Content is empty!");
-        return;
-    }
+    if (!content) { alert("Content is empty!"); return; }
 
     fetch("/api/upload/raw", {
         method: "POST",
         body: content,
-        headers: {
-            "Content-Type": "text/plain"
-        }
+        headers: { "Content-Type": "text/plain" }
     })
     .then(res => res.json())
     .then(data => {
         if(data.status === "success") {
             alert("Uploaded! Your key: " + data.key);
-            window.location.href = "/" + data.key; // redirect to view page
+            window.location.href = "/" + data.key;
         } else {
             alert("Error: " + data.message);
         }
     })
-    .catch(err => {
-        console.error(err);
-        alert("An error occurred while uploading.");
-    });
+    .catch(err => { console.error(err); alert("An error occurred."); });
 }
-</script>
 
+// ---------------- Batch File Upload ----------------
+const fileInput = document.getElementById('fileInput');
+const uploadFileBtn = document.getElementById('uploadFileBtn');
+const statusDiv = document.getElementById('status');
+const idList = document.getElementById('idList');
+const copyBtn = document.getElementById('copyBtn');
+
+let textContent = '';
+
+fileInput.addEventListener('change', () => {
+    const file = fileInput.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        textContent = e.target.result;
+        statusDiv.textContent = `File loaded (${textContent.length} chars). Ready to upload.`;
+        uploadFileBtn.disabled = false;
+    };
+    reader.readAsText(file);
+});
+
+uploadFileBtn.addEventListener('click', async () => {
+    if(!textContent) return alert('Please select a file first.');
+    uploadFileBtn.disabled = true;
+    idList.innerHTML = '';
+    copyBtn.style.display = 'none';
+
+    const CHUNK = 80000;
+    const total = Math.ceil(textContent.length / CHUNK);
+    const ids = [];
+
+    for(let i=0; i<total; i++){
+        const chunk = textContent.slice(i*CHUNK, (i+1)*CHUNK);
+        statusDiv.textContent = `Uploading batch ${i+1} of ${total}...`;
+
+        try{
+            const res = await fetch('/api/upload/raw', {
+                method: 'POST',
+                headers: {'Content-Type':'text/plain'},
+                body: chunk
+            });
+            const data = await res.json();
+
+            const li = document.createElement('li');
+            li.classList.add('list-group-item');
+            if(data.status === 'success'){
+                ids.push(data.key);
+                li.innerHTML = `<a href="/${data.key}" target="_blank">${data.key}</a>`;
+            } else {
+                li.textContent = `Error in batch ${i+1}: ${data.message}`;
+                li.classList.add('list-group-item-danger');
+            }
+            idList.appendChild(li);
+
+        } catch(err){
+            const li = document.createElement('li');
+            li.textContent = `Error in batch ${i+1}: ${err.message}`;
+            li.classList.add('list-group-item-danger');
+            idList.appendChild(li);
+        }
+    }
+
+    statusDiv.textContent = `Upload complete! ${ids.length}/${total} batches uploaded.`;
+    copyBtn.style.display = 'inline-block';
+
+    copyBtn.onclick = () => {
+        navigator.clipboard.writeText(ids.join('\n'));
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => copyBtn.textContent = 'Copy All IDs', 1500);
+    };
+});
+</script>
 {% endblock %}
