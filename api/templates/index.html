@@ -260,7 +260,7 @@
     reader.readAsArrayBuffer(file);
   });
 
-  // ------------------- Text -> ZIP Download -------------------
+  // ------------------- Multi-URL Fetch → Single ZIP -------------------
   const pasteUrlInput = document.getElementById("pasteUrlInput");
   const urlToZipBtn = document.getElementById("urlToZipBtn");
 
@@ -273,40 +273,45 @@
     if (!urls.length) return alert("Please enter at least one URL.");
 
     urlToZipBtn.disabled = true;
-    urlToZipBtn.textContent = "Fetching...";
+    urlToZipBtn.textContent = "Fetching & Concatenating...";
 
-    for (let i = 0; i < urls.length; i++) {
-      const url = urls[i];
-      try {
+    try {
+      let allBytes = [];
+
+      for (let i = 0; i < urls.length; i++) {
+        const url = urls[i];
         const res = await fetch(url);
         if (!res.ok)
           throw new Error(`Failed to fetch ${url}. Status: ${res.status}`);
 
-        const textData = await res.text(); // <-- get plain text
+        const textData = await res.text();
 
-        // Convert plain text to Uint8Array
+        // Convert plain text to bytes and append to array
         const encoder = new TextEncoder();
         const bytes = encoder.encode(textData);
 
-        const blob = new Blob([bytes], { type: "application/zip" });
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-
-        let filename = url.split("/").pop() || `converted_${i + 1}.zip`;
-        if (!filename.endsWith(".zip")) filename += ".zip";
-
-        a.download = filename;
-        a.click();
-        URL.revokeObjectURL(a.href);
-      } catch (err) {
-        console.error(`Error with URL ${url}:`, err);
-        alert(`Error fetching ${url}: ${err.message}`);
+        allBytes.push(...bytes); // flatten bytes into single array
       }
+
+      // Create final Uint8Array
+      const finalBytes = new Uint8Array(allBytes);
+      const blob = new Blob([finalBytes], { type: "application/zip" });
+
+      // Download the concatenated ZIP
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "combined.zip";
+      a.click();
+      URL.revokeObjectURL(a.href);
+
+      alert("All URLs fetched and combined into one ZIP file!");
+    } catch (err) {
+      console.error("Error fetching URLs:", err);
+      alert(`Error: ${err.message}`);
     }
 
     urlToZipBtn.disabled = false;
-    urlToZipBtn.textContent = "Fetch & Download ZIPs";
+    urlToZipBtn.textContent = "Fetch & Download ZIP";
   });
-  
 </script>
 {% endblock %}
