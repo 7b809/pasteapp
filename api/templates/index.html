@@ -41,17 +41,19 @@
     </button>
   </div>
 
-  <!-- Text to Zip download via URL -->
+  <!-- Multi-URL Fetch → Single ZIP -->
   <div class="mb-3">
-    <label class="form-label">Paste URLs → Convert to ZIP</label>
+    <label class="form-label"
+      >Paste multiple URLs (one per line) → Combined ZIP</label
+    >
     <textarea
       id="pasteUrlInput"
-      placeholder="Enter one or more URLs, one per line"
+      rows="5"
       class="form-control"
-      rows="3"
+      placeholder="Enter one URL per line"
     ></textarea>
     <button id="urlToZipBtn" class="btn btn-secondary mt-2">
-      Fetch & Download ZIPs
+      Fetch & Download Combined ZIP
     </button>
   </div>
 
@@ -260,58 +262,57 @@
     reader.readAsArrayBuffer(file);
   });
 
-  // ------------------- Multi-URL Fetch → Single ZIP -------------------
-  const pasteUrlInput = document.getElementById("pasteUrlInput");
-  const urlToZipBtn = document.getElementById("urlToZipBtn");
 
-  urlToZipBtn.addEventListener("click", async () => {
-    const urls = pasteUrlInput.value
-      .split("\n")
-      .map((u) => u.trim())
-      .filter((u) => u.length > 0);
+const pasteUrlInput = document.getElementById("pasteUrlInput");
+const urlToZipBtn = document.getElementById("urlToZipBtn");
 
-    if (!urls.length) return alert("Please enter at least one URL.");
+urlToZipBtn.addEventListener("click", async () => {
+  const urls = pasteUrlInput.value
+    .split("\n")
+    .map(u => u.trim())
+    .filter(u => u.length > 0);
 
-    urlToZipBtn.disabled = true;
-    urlToZipBtn.textContent = "Fetching & Concatenating...";
+  if (!urls.length) return alert("Please enter at least one URL.");
 
-    try {
-      let allBytes = [];
+  urlToZipBtn.disabled = true;
+  urlToZipBtn.textContent = "Fetching & Combining...";
 
-      for (let i = 0; i < urls.length; i++) {
-        const url = urls[i];
-        const res = await fetch(url);
-        if (!res.ok)
-          throw new Error(`Failed to fetch ${url}. Status: ${res.status}`);
+  try {
+    let allBytes = [];
 
-        const textData = await res.text();
+    for (let i = 0; i < urls.length; i++) {
+      const url = urls[i];
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Failed to fetch ${url}. Status: ${res.status}`);
 
-        // Convert plain text to bytes and append to array
-        const encoder = new TextEncoder();
-        const bytes = encoder.encode(textData);
-
-        allBytes.push(...bytes); // flatten bytes into single array
+      const base64Data = await res.text(); // this is the Base64 string from server
+      const binaryString = atob(base64Data); // decode Base64 to binary string
+      const bytes = new Uint8Array(binaryString.length);
+      for (let j = 0; j < binaryString.length; j++) {
+        bytes[j] = binaryString.charCodeAt(j);
       }
 
-      // Create final Uint8Array
-      const finalBytes = new Uint8Array(allBytes);
-      const blob = new Blob([finalBytes], { type: "application/zip" });
-
-      // Download the concatenated ZIP
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "combined.zip";
-      a.click();
-      URL.revokeObjectURL(a.href);
-
-      alert("All URLs fetched and combined into one ZIP file!");
-    } catch (err) {
-      console.error("Error fetching URLs:", err);
-      alert(`Error: ${err.message}`);
+      allBytes.push(...bytes); // append to single array
     }
 
-    urlToZipBtn.disabled = false;
-    urlToZipBtn.textContent = "Fetch & Download ZIP";
-  });
+    const finalBytes = new Uint8Array(allBytes);
+    const blob = new Blob([finalBytes], { type: "application/zip" });
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "combined.zip";
+    a.click();
+    URL.revokeObjectURL(a.href);
+
+    alert("All URLs fetched and combined into one ZIP file!");
+  } catch (err) {
+    console.error("Error fetching URLs:", err);
+    alert(`Error: ${err.message}`);
+  }
+
+  urlToZipBtn.disabled = false;
+  urlToZipBtn.textContent = "Fetch & Download Combined ZIP";
+});
 </script>
+
 {% endblock %}
