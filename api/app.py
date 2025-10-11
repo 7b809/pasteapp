@@ -75,6 +75,10 @@ def api_upload_raw():
     
     return jsonify({"status": "error", "message": "No content provided"}), 400
 
+@app.route("/upload_batches")
+def upload_batches_page():
+    return render_template("upload_batches.html")
+
 # ------------------ Run App ------------------
 
 if __name__ == "__main__":
