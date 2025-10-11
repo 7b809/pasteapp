@@ -1,3 +1,4 @@
 Flask
 pymongo
 mangum
+flask_cors
