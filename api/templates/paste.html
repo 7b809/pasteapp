@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Take {{ key }}{% endblock %}
+
+{% block body %}
+
+<form method="post">
+<p><b>this link:</b> <a target="_blank" href="{{ request.url }}">{{ request.url }}</a></p>
+
+<div class="btn-group mb-3">
+    <button type="submit" class="btn btn-primary">Save</button>
+    <button type="button" class="btn btn-secondary" onclick="clearContent()">Clear</button>
+    <button type="button" class="btn btn-success" onclick="copyContent()">Copy</button>
+    <button type="button" class="btn btn-warning" onclick="pasteContent()">Take</button>
+    <a href="{{ url_for('index') }}" class="btn btn-info">New Paste</a>
+</div>
+
+<textarea id="contentArea" name="content" class="form-control mb-3" rows="15000">{{ content }}</textarea>
+
+</form>
+
+<hr>
+{% endblock %}
+
+
