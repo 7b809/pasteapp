@@ -218,6 +218,20 @@
       zipIdList.innerHTML = "";
       zipCopyBtn.style.display = "none";
 
+      // 🧠 STEP 1: Send dummy batch to warm up proxy
+      zipStatus.textContent = "Sending dummy warm-up request...";
+      try {
+        await fetch("/api/upload/raw", {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: "dummy-proxy-init",
+        });
+        console.log("Dummy request completed successfully (ignored).");
+      } catch (err) {
+        console.warn("Dummy request failed, continuing anyway:", err);
+      }
+
+      // 🧠 STEP 2: Upload real batches
       for (let i = 0; i < total; i++) {
         const chunk = base64Text.slice(i * CHUNK, (i + 1) * CHUNK);
         zipStatus.textContent = `Uploading batch ${i + 1} of ${total}...`;
@@ -231,6 +245,7 @@
           const data = await res.json();
           const li = document.createElement("li");
           li.classList.add("list-group-item");
+
           if (data.status === "success") {
             const fullUrl = `${window.location.origin}/api/get/${data.key}`;
             ids.push(fullUrl);
@@ -276,40 +291,6 @@
 
     urlToZipBtn.disabled = true;
     urlToZipBtn.textContent = "Fetching & Combining...";
-
-    // try {
-    //   let allBytes = [];
-
-    //   for (let i = 0; i < urls.length; i++) {
-    //     const url = urls[i];
-    //     let res = await fetch(url);
-    //     if (!res.ok)
-    //       throw new Error(`Failed to fetch ${url}. Status: ${res.status}`);
-
-    //     const base64Data = await res; // this is the Base64 string from server
-    //     console.log(res);
-    //     //   const binaryString = atob(base64Data); // decode Base64 to binary string
-    //     //   const bytes = new Uint8Array(binaryString.length);
-    //     //   for (let j = 0; j < binaryString.length; j++) {
-    //     //     bytes[j] = binaryString.charCodeAt(j);
-    //     //   }
-
-    //     //   allBytes.push(...bytes); // append to single array
-    //     // }
-
-    //     // const finalBytes = new Uint8Array(allBytes);
-    //     // const blob = new Blob([finalBytes], { type: "application/zip" });
-
-    //     // const a = document.createElement("a");
-    //     // a.href = URL.createObjectURL(blob);
-    //     // a.download = "combined.zip";
-    //     // a.click();
-    //     // URL.revokeObjectURL(a.href);
-    //   }
-    // } catch (err) {
-    //   console.error("Error fetching URLs:", err);
-    //   alert(`Error: ${err.message}`);
-    // }
 
     try {
       let allBytes = [];
