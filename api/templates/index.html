@@ -218,21 +218,46 @@
       zipIdList.innerHTML = "";
       zipCopyBtn.style.display = "none";
 
-      // 🧠 STEP 1: Send dummy batch to warm up proxy
-      zipStatus.textContent = "Sending dummy warm-up request...";
+      // 🧠 STEP 1: Send first batch as test
+      zipStatus.textContent = "Sending first batch (test to check proxy)...";
+      const firstChunk = base64Text.slice(0, CHUNK);
+      let firstBatchBlocked = false;
+
       try {
-        await fetch("/api/upload/raw", {
+        const res = await fetch("/api/upload/raw", {
           method: "POST",
           headers: { "Content-Type": "text/plain" },
-          body: "dummy-proxy-init",
+          body: firstChunk,
         });
-        console.log("Dummy request completed successfully (ignored).");
+        const data = await res.json();
+        const li = document.createElement("li");
+        li.classList.add("list-group-item");
+
+        if (data.status === "success") {
+          // ✅ Proxy is already active
+          const fullUrl = `${window.location.origin}/api/get/${data.key}`;
+          ids.push(fullUrl);
+          li.innerHTML = `<a href="${fullUrl}" target="_blank">${fullUrl}</a> (first batch OK)`;
+          zipIdList.appendChild(li);
+          zipStatus.textContent = "Proxy open — continuing normal upload...";
+        } else {
+          throw new Error(data.message || "Unexpected error");
+        }
       } catch (err) {
-        console.warn("Dummy request failed, continuing anyway:", err);
+        // ❌ Blocked — we’ll retry all batches again
+        firstBatchBlocked = true;
+        const li = document.createElement("li");
+        li.textContent = "First batch blocked (proxy cold) — retrying...";
+        li.classList.add("list-group-item-warning");
+        zipIdList.appendChild(li);
+        zipStatus.textContent = "Retrying full upload from first batch...";
       }
 
-      // 🧠 STEP 2: Upload real batches
-      for (let i = 0; i < total; i++) {
+      // 🧠 STEP 2: Decide upload start point
+      const startIndex = firstBatchBlocked ? 0 : 1;
+
+      // 🧠 STEP 3: Upload remaining (or all if retry)
+      for (let i = startIndex; i < total; i++) {
         const chunk = base64Text.slice(i * CHUNK, (i + 1) * CHUNK);
         zipStatus.textContent = `Uploading batch ${i + 1} of ${total}...`;
 
@@ -263,6 +288,7 @@
         }
       }
 
+      // 🧠 STEP 4: Wrap up
       zipStatus.textContent = `Upload complete! ${ids.length} of ${total} batches uploaded.`;
       zipCopyBtn.style.display = "inline-block";
       zipCopyBtn.onclick = () => {
