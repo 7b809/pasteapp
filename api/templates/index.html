@@ -89,10 +89,10 @@
   }
 
   function copyContent() {
-    const area = document.getElementById("contentArea");
-    area.select();
-    document.execCommand("copy");
-    alert("Copied to clipboard!");
+    // Save flag to sessionStorage to copy after reload
+    sessionStorage.setItem("copyAfterReload", "true");
+    // Reload the page
+    location.reload();
   }
 
   function pasteContent() {
@@ -122,6 +122,19 @@
       })
       .catch((err) => alert("An error occurred."));
   }
+
+  // ------------------- Trigger copy after reload if flag is set -------------------
+  window.addEventListener("load", () => {
+    if (sessionStorage.getItem("copyAfterReload") === "true") {
+      const area = document.getElementById("contentArea");
+      if (area) {
+        area.select();
+        document.execCommand("copy");
+        alert("Copied to clipboard!");
+      }
+      sessionStorage.removeItem("copyAfterReload");
+    }
+  });
 
   // ------------------- Existing Text File Batch Upload -------------------
   const fileInput = document.getElementById("fileInput");
@@ -235,7 +248,6 @@
         li.classList.add("list-group-item");
 
         if (data.status === "success") {
-          // ✅ Proxy is already active
           firstBatchUrl = `${window.location.origin}/api/get/${data.key}`;
           ids.push(firstBatchUrl);
           li.innerHTML = `<a href="${firstBatchUrl}" target="_blank">${firstBatchUrl}</a> (first batch OK)`;
@@ -245,7 +257,6 @@
           throw new Error(data.message || "Unexpected error");
         }
       } catch (err) {
-        // ❌ Blocked — we’ll retry first batch after others
         firstBatchBlocked = true;
         const li = document.createElement("li");
         li.textContent = "First batch blocked (proxy cold) — will retry after others...";
@@ -302,10 +313,8 @@
 
           if (data.status === "success") {
             firstBatchUrl = `${window.location.origin}/api/get/${data.key}`;
-            // Insert first batch URL at the beginning to maintain order
             ids.unshift(firstBatchUrl);
             li.innerHTML = `<a href="${firstBatchUrl}" target="_blank">${firstBatchUrl}</a> (first batch retry OK)`;
-            // Insert at the top of the list for visual order
             zipIdList.insertBefore(li, zipIdList.firstChild);
           } else {
             li.textContent = `Error in first batch retry: ${data.message}`;
