@@ -5,7 +5,7 @@ from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
-
+ 
 # MongoDB connection
 mongo_url = os.getenv("MONGO_URL")
 client = MongoClient(mongo_url)
