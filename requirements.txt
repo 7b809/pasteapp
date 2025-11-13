@@ -1,4 +1,4 @@
 Flask
 pymongo
-mangum
-flask_cors
+flask-cors
+cryptography
