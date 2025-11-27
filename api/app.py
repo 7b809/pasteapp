@@ -9,11 +9,9 @@ app = Flask(__name__)
 CORS(app)
 
 # ------------------ Encryption Setup ------------------
-# Load the encryption key from Vercel environment variable ENCRYPT_KEY
 FERNET_KEY = os.getenv("ENCRYPT_KEY")
 
 if not FERNET_KEY:
-    # This should NEVER happen on production (Vercel)
     FERNET_KEY = Fernet.generate_key().decode()
     print("⚠ WARNING: No ENCRYPT_KEY provided. Using EPHEMERAL key.")
 else:
@@ -68,18 +66,29 @@ def api_get_paste(key):
         return jsonify({"error": str(e)}), 500
 
 
+# ------------------ Updated View + Custom ID Logic ------------------
 @app.route("/<key>", methods=["GET", "POST"])
 def view_paste(key):
     paste = pastes.find_one({"key": key})
 
+    # ---------- POST: Save or Update ----------
     if request.method == "POST":
         new_content = request.form.get("content")
         if new_content and new_content.strip():
             enc = encrypt_text(new_content)
-            pastes.update_one({"key": key}, {"$push": {"message_list": enc}})
+
+            if paste:
+                # Append version
+                pastes.update_one({"key": key}, {"$push": {"message_list": enc}})
+            else:
+                # Create new paste with custom ID
+                pastes.insert_one({"key": key, "message_list": [enc]})
+
             return redirect(url_for("view_paste", key=key))
 
+    # ---------- GET: View existing or blank ----------
     latest_message = ""
+
     if paste:
         try:
             encrypted = paste["message_list"][-1]
@@ -89,6 +98,7 @@ def view_paste(key):
         except:
             latest_message = ""
 
+    # If paste does not exist → user sees blank textarea and can create content
     return render_template("paste.html", key=key, content=latest_message)
 
 
@@ -127,9 +137,8 @@ def upload_batches_page():
 
 
 # ------------------ IMPORTANT ------------------
-# ❌ DO NOT USE app.run() on Vercel (serverless)
+# ❌ DO NOT USE app.run() on Vercel
 # ------------------------------------------------
 
-# ------------------ Run App ------------------
 if __name__ == "__main__":
     app.run(debug=True)
