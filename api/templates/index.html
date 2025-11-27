@@ -86,12 +86,15 @@
   // ------------------- Shift + Enter = Save -------------------
 document.addEventListener("keydown", function (event) {
   const textarea = document.getElementById("contentArea");
+  const saveBtn = document.getElementsByClassName(".btn-primary")
   if (!textarea) return;
 
   // Condition: SHIFT + ENTER
   if (event.key === "Enter" && event.shiftKey) {
+    saveBtn.click()
     event.preventDefault(); // stop newline
     document.getElementById("normalForm").submit();
+
   }
 });
 
