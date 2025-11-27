@@ -83,6 +83,18 @@
 
 <!-- -------- Scripts -------- -->
 <script>
+  // ------------------- Shift + Enter = Save -------------------
+document.addEventListener("keydown", function (event) {
+  const textarea = document.getElementById("contentArea");
+  if (!textarea) return;
+
+  // Condition: SHIFT + ENTER
+  if (event.key === "Enter" && event.shiftKey) {
+    event.preventDefault(); // stop newline
+    document.getElementById("normalForm").submit();
+  }
+});
+
   // ------------------- Textarea Functions -------------------
   function clearContent() {
     document.getElementById("contentArea").value = "";
